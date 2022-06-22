@@ -43,6 +43,7 @@ class Application {
   std::vector<VkImage> swapChainImages;
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
+  std::vector<VkImageView> swapChainImageViews;
 
   void initWindow();
   void initVulkan();
@@ -55,6 +56,7 @@ class Application {
   void pickPhysicalDevice();
   void createLogicalDevice();
   void createSwapChain();
+  void createImageViews();
 
   bool isDeviceSuitable(VkPhysicalDevice device);
 
