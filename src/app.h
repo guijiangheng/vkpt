@@ -57,6 +57,7 @@ class Application {
   void createLogicalDevice();
   void createSwapChain();
   void createImageViews();
+  void createPipeline();
 
   bool isDeviceSuitable(VkPhysicalDevice device);
 
@@ -69,6 +70,8 @@ class Application {
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
   std::vector<const char*> getRequiredExtensions();
+
+  VkShaderModule createShaderModule(const std::vector<char>& code);
 
   static VKAPI_ATTR VkBool32 VKAPI_CALL
   debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

@@ -3,6 +3,8 @@
 #include <limits>
 #include <set>
 
+#include "utils.h"
+
 namespace vkpt {
 
 const uint32_t WIDTH = 800;
@@ -62,6 +64,7 @@ void Application::initVulkan() {
   createLogicalDevice();
   createSwapChain();
   createImageViews();
+  createPipeline();
 }
 
 void Application::mainLoop() {
@@ -281,6 +284,31 @@ void Application::createImageViews() {
   }
 }
 
+void Application::createPipeline() {
+  auto vertShaderCode = readFile("../shaders/simple.vert.spv");
+  auto fragShaderCode = readFile("../shaders/simple.frag.spv");
+
+  VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+  VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+
+  VkPipelineShaderStageCreateInfo vertShaderStageInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .stage = VK_SHADER_STAGE_VERTEX_BIT,
+      .module = vertShaderModule,
+      .pName = "main"};
+
+  VkPipelineShaderStageCreateInfo fragShaderStageInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+      .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+      .module = fragShaderModule,
+      .pName = "main"};
+
+  VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+  vkDestroyShaderModule(device, fragShaderModule, nullptr);
+  vkDestroyShaderModule(device, vertShaderModule, nullptr);
+}
+
 VkSurfaceFormatKHR Application::chooseSurfaceFormat(
     const std::vector<VkSurfaceFormatKHR>& availableFormats) {
   for (auto& availableFormat : availableFormats) {
@@ -398,6 +426,18 @@ std::vector<const char*> Application::getRequiredExtensions() {
   }
 
   return extensions;
+}
+
+VkShaderModule Application::createShaderModule(const std::vector<char>& code) {
+  VkShaderModuleCreateInfo createInfo{.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                                      .codeSize = code.size(),
+                                      .pCode = reinterpret_cast<const uint32_t*>(code.data())};
+  VkShaderModule shaderModule;
+  if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create shader module!");
+  }
+
+  return shaderModule;
 }
 
 }  // namespace vkpt
