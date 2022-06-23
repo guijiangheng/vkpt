@@ -13,7 +13,9 @@ struct QueueFamilyIndices {
   std::optional<uint32_t> graphicsFamily;
   std::optional<uint32_t> presentFamily;
 
-  bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
+  bool isComplete() {
+    return graphicsFamily.has_value() && presentFamily.has_value();
+  }
 };
 
 struct SwapChainSupportDetails {
@@ -45,6 +47,9 @@ class Application {
   VkExtent2D swapChainExtent;
   std::vector<VkImageView> swapChainImageViews;
 
+  VkRenderPass renderPass;
+  VkPipelineLayout pipelineLayout;
+
   void initWindow();
   void initVulkan();
   void mainLoop();
@@ -57,14 +62,18 @@ class Application {
   void createLogicalDevice();
   void createSwapChain();
   void createImageViews();
+  void createRenderPass();
   void createPipeline();
 
   bool isDeviceSuitable(VkPhysicalDevice device);
 
-  void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+  void populateDebugMessengerCreateInfo(
+      VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
-  VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& modes);
-  VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
+  VkPresentModeKHR choosePresentMode(
+      const std::vector<VkPresentModeKHR>& modes);
+  VkSurfaceFormatKHR chooseSurfaceFormat(
+      const std::vector<VkSurfaceFormatKHR>& formats);
   VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
@@ -76,7 +85,8 @@ class Application {
   static VKAPI_ATTR VkBool32 VKAPI_CALL
   debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                 VkDebugUtilsMessageTypeFlagsEXT messageType,
-                const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+                const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                void* pUserData) {
     std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 
     return VK_FALSE;
