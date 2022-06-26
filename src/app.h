@@ -46,9 +46,18 @@ class Application {
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
   std::vector<VkImageView> swapChainImageViews;
+  std::vector<VkFramebuffer> swapChainFramebuffers;
 
   VkRenderPass renderPass;
   VkPipelineLayout pipelineLayout;
+  VkPipeline graphicsPipeline;
+
+  VkSemaphore imageAvailableSemaphore;
+  VkSemaphore renderFinishedSemaphore;
+  VkFence inFlightFence;
+
+  VkCommandPool commandPool;
+  VkCommandBuffer commandBuffer;
 
   void initWindow();
   void initVulkan();
@@ -63,7 +72,14 @@ class Application {
   void createSwapChain();
   void createImageViews();
   void createRenderPass();
-  void createPipeline();
+  void createGraphicsPipeline();
+  void createFramebuffers();
+  void createCommandPool();
+  void createCommandBuffer();
+  void createSyncObjects();
+
+  void drawFrame();
+  void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
   bool isDeviceSuitable(VkPhysicalDevice device);
 
