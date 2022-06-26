@@ -62,6 +62,8 @@ class Application {
   std::vector<VkFence> inFlightFences;
   uint32_t currentFrame = 0;
 
+  bool framebufferResized = false;
+
   void initWindow();
   void initVulkan();
   void mainLoop();
@@ -80,6 +82,9 @@ class Application {
   void createCommandPool();
   void createCommandBuffers();
   void createSyncObjects();
+
+  void cleanupSwapChain();
+  void recreateSwapChain();
 
   void drawFrame();
   void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
@@ -100,6 +105,12 @@ class Application {
   std::vector<const char*> getRequiredExtensions();
 
   VkShaderModule createShaderModule(const std::vector<char>& code);
+
+  static void framebufferResizeCallback(GLFWwindow* window, int width,
+                                        int height) {
+    auto app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+    app->framebufferResized = true;
+  }
 
   static VKAPI_ATTR VkBool32 VKAPI_CALL
   debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
