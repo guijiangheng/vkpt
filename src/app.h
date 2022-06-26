@@ -3,6 +3,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <array>
+#include <glm/glm.hpp>
 #include <iostream>
 #include <optional>
 #include <vector>
@@ -24,6 +26,33 @@ struct SwapChainSupportDetails {
   VkSurfaceCapabilitiesKHR capabilities;
   std::vector<VkSurfaceFormatKHR> formats;
   std::vector<VkPresentModeKHR> presentModes;
+};
+
+struct Vertex {
+  glm::vec2 pos;
+  glm::vec3 color;
+
+  static VkVertexInputBindingDescription getBindingDescription() {
+    return VkVertexInputBindingDescription{
+        .binding = 0,
+        .stride = sizeof(Vertex),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX};
+  }
+
+  static std::array<VkVertexInputAttributeDescription, 2>
+  getAttributeDescriptions() {
+    return {
+        VkVertexInputAttributeDescription{.location = 0,
+                                          .binding = 0,
+                                          .format = VK_FORMAT_R32G32_SFLOAT,
+                                          .offset = offsetof(Vertex, pos)},
+        VkVertexInputAttributeDescription{.location = 1,
+                                          .binding = 0,
+                                          .format = VK_FORMAT_R32G32B32_SFLOAT,
+                                          .offset = offsetof(Vertex, color)},
+
+    };
+  }
 };
 
 class Application {
@@ -57,6 +86,11 @@ class Application {
   VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
 
+  VkBuffer vertexBuffer;
+  VkDeviceMemory vertexBufferMemory;
+  VkBuffer indexBuffer;
+  VkDeviceMemory indexBufferMemory;
+
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
   std::vector<VkFence> inFlightFences;
@@ -82,6 +116,15 @@ class Application {
   void createCommandPool();
   void createCommandBuffers();
   void createSyncObjects();
+  void createVertexBuffer();
+  void createIndexBuffer();
+
+  void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
+                    VkMemoryPropertyFlags properties, VkBuffer& buffer,
+                    VkDeviceMemory& bufferMemory);
+  void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+  uint32_t findMemoryType(uint32_t typeFilter,
+                          VkMemoryPropertyFlags properties);
 
   void cleanupSwapChain();
   void recreateSwapChain();
