@@ -51,6 +51,16 @@ if (NOT TINYOBJ_PATH)
   set(TINYOBJ_PATH external/tinyobjloader)
 endif()
 
+if (NOT STB_INCLUDEDIR)
+  find_path (STB_INCLUDEDIR stb_image.h PATH_SUFFIXES stb)
+endif ()
+
+if (NOT STB_INCLUDEDIR)
+  message(FATAL_ERROR, "stb_image.h not found")
+endif()
+
+include_directories(${STB_INCLUDEDIR})
+
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
