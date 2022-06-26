@@ -9,6 +9,8 @@
 
 namespace vkpt {
 
+constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
 struct QueueFamilyIndices {
   std::optional<uint32_t> graphicsFamily;
   std::optional<uint32_t> presentFamily;
@@ -52,12 +54,13 @@ class Application {
   VkPipelineLayout pipelineLayout;
   VkPipeline graphicsPipeline;
 
-  VkSemaphore imageAvailableSemaphore;
-  VkSemaphore renderFinishedSemaphore;
-  VkFence inFlightFence;
-
   VkCommandPool commandPool;
-  VkCommandBuffer commandBuffer;
+  std::vector<VkCommandBuffer> commandBuffers;
+
+  std::vector<VkSemaphore> imageAvailableSemaphores;
+  std::vector<VkSemaphore> renderFinishedSemaphores;
+  std::vector<VkFence> inFlightFences;
+  uint32_t currentFrame = 0;
 
   void initWindow();
   void initVulkan();
@@ -75,7 +78,7 @@ class Application {
   void createGraphicsPipeline();
   void createFramebuffers();
   void createCommandPool();
-  void createCommandBuffer();
+  void createCommandBuffers();
   void createSyncObjects();
 
   void drawFrame();
