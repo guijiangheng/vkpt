@@ -12,9 +12,6 @@
 
 namespace vkpt {
 
-constexpr uint32_t WIDTH = 800;
-constexpr uint32_t HEIGHT = 600;
-
 const std::vector<Vertex> vertices = {
     {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
     {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
@@ -58,19 +55,9 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
 }
 
 void Application::run() {
-  initWindow();
   initVulkan();
   mainLoop();
   cleanup();
-}
-
-void Application::initWindow() {
-  glfwInit();
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-  window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
-  glfwSetWindowUserPointer(window, this);
-  glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
 void Application::initVulkan() {
@@ -99,7 +86,7 @@ void Application::initVulkan() {
 }
 
 void Application::mainLoop() {
-  while (!glfwWindowShouldClose(window)) {
+  while (!window.shouldClose()) {
     glfwPollEvents();
     drawFrame();
   }
@@ -142,8 +129,6 @@ void Application::cleanup() {
 
   vkDestroySurfaceKHR(instance, surface, nullptr);
   vkDestroyInstance(instance, nullptr);
-  glfwDestroyWindow(window);
-  glfwTerminate();
 }
 
 void Application::createInstance() {
@@ -201,12 +186,7 @@ void Application::createDebugMessenger() {
   }
 }
 
-void Application::createSurface() {
-  if (glfwCreateWindowSurface(instance, window, nullptr, &surface) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create window surface!");
-  }
-}
+void Application::createSurface() { window.createSurface(instance, surface); }
 
 void Application::pickPhysicalDevice() {
   uint32_t deviceCount = 0;
@@ -1052,11 +1032,10 @@ void Application::cleanupSwapChain() {
 }
 
 void Application::recreateSwapChain() {
-  int width = 0, height = 0;
-  glfwGetFramebufferSize(window, &width, &height);
+  auto extend = window.getExtent();
 
-  while (width == 0 || height == 0) {
-    glfwGetFramebufferSize(window, &width, &height);
+  while (extend.width == 0 || extend.height == 0) {
+    extend = window.getExtent();
     glfwWaitEvents();
   }
 
@@ -1147,8 +1126,8 @@ void Application::drawFrame() {
   result = vkQueuePresentKHR(presentQueue, &presentInfo);
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
-      framebufferResized) {
-    framebufferResized = false;
+      window.getFramebufferResized()) {
+    window.resetResizedFlag();
     recreateSwapChain();
   } else if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to present swap chain image!");
@@ -1186,18 +1165,13 @@ VkExtent2D Application::chooseExtent(
       std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;
   } else {
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-
-    VkExtent2D actualExtent = {static_cast<uint32_t>(width),
-                               static_cast<uint32_t>(height)};
-    actualExtent.width =
-        std::clamp(actualExtent.width, capabilities.minImageExtent.width,
-                   capabilities.maxImageExtent.width);
-    actualExtent.height =
-        std::clamp(actualExtent.height, capabilities.minImageExtent.height,
+    auto extend = window.getExtent();
+    extend.width = std::clamp(extend.width, capabilities.minImageExtent.width,
+                              capabilities.maxImageExtent.width);
+    extend.height =
+        std::clamp(extend.height, capabilities.minImageExtent.height,
                    capabilities.maxImageExtent.height);
-    return actualExtent;
+    return extend;
   }
 }
 

@@ -1,8 +1,5 @@
 #pragma once
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #define GLM_FORCE_RADIANS
 #include <array>
 #include <glm/glm.hpp>
@@ -10,6 +7,8 @@
 #include <iostream>
 #include <optional>
 #include <vector>
+
+#include "window.h"
 
 namespace vkpt {
 
@@ -72,7 +71,7 @@ class Application {
   void run();
 
  private:
-  GLFWwindow* window;
+  Window window{800, 600, "Vulkan"};
 
   VkInstance instance;
   VkDebugUtilsMessengerEXT debugMessenger;
@@ -119,9 +118,6 @@ class Application {
   std::vector<VkFence> inFlightFences;
   uint32_t currentFrame = 0;
 
-  bool framebufferResized = false;
-
-  void initWindow();
   void initVulkan();
   void mainLoop();
   void cleanup();
@@ -193,12 +189,6 @@ class Application {
   std::vector<const char*> getRequiredExtensions();
 
   VkShaderModule createShaderModule(const std::vector<char>& code);
-
-  static void framebufferResizeCallback(GLFWwindow* window, int width,
-                                        int height) {
-    auto app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-    app->framebufferResized = true;
-  }
 
   static VKAPI_ATTR VkBool32 VKAPI_CALL
   debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
