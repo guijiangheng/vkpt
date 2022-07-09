@@ -4,30 +4,13 @@
 #include <array>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
-#include <optional>
 #include <vector>
 
-#include "window.h"
+#include "device.h"
 
 namespace vkpt {
 
 constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-
-struct QueueFamilyIndices {
-  std::optional<uint32_t> graphicsFamily;
-  std::optional<uint32_t> presentFamily;
-
-  bool isComplete() {
-    return graphicsFamily.has_value() && presentFamily.has_value();
-  }
-};
-
-struct SwapChainSupportDetails {
-  VkSurfaceCapabilitiesKHR capabilities;
-  std::vector<VkSurfaceFormatKHR> formats;
-  std::vector<VkPresentModeKHR> presentModes;
-};
 
 struct UniformBufferObject {
   glm::mat4 model;
@@ -72,16 +55,7 @@ class Application {
 
  private:
   Window window{800, 600, "Vulkan"};
-
-  VkInstance instance;
-  VkDebugUtilsMessengerEXT debugMessenger;
-  VkSurfaceKHR surface;
-
-  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-  VkDevice device;
-
-  VkQueue graphicsQueue;
-  VkQueue presentQueue;
+  Device device{window};
 
   VkSwapchainKHR swapChain;
   std::vector<VkImage> swapChainImages;
@@ -95,7 +69,6 @@ class Application {
   VkPipelineLayout pipelineLayout;
   VkPipeline graphicsPipeline;
 
-  VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
 
   VkDescriptorPool descriptorPool;
@@ -122,18 +95,12 @@ class Application {
   void mainLoop();
   void cleanup();
 
-  void createInstance();
-  void createDebugMessenger();
-  void createSurface();
-  void pickPhysicalDevice();
-  void createLogicalDevice();
   void createSwapChain();
   void createImageViews();
   void createRenderPass();
   void createDescriptorSetLayout();
   void createGraphicsPipeline();
   void createFramebuffers();
-  void createCommandPool();
   void createCommandBuffers();
   void createSyncObjects();
   void createVertexBuffer();
@@ -145,27 +112,6 @@ class Application {
   void createDescriptorPool();
   void createDescriptorSets();
 
-  VkCommandBuffer beginSingleTimeCommands();
-  void endSingleTimeCommands(VkCommandBuffer commandBuffer);
-
-  VkImageView createImageView(VkImage image, VkFormat format);
-  void createImage(uint32_t width, uint32_t height, VkFormat format,
-                   VkImageTiling tiling, VkImageUsageFlags usage,
-                   VkMemoryPropertyFlags properties, VkImage& image,
-                   VkDeviceMemory& imageMemory);
-  void transitionImageLayout(VkImage image, VkFormat format,
-                             VkImageLayout oldLayout, VkImageLayout newLayout);
-
-  void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                    VkMemoryPropertyFlags properties, VkBuffer& buffer,
-                    VkDeviceMemory& bufferMemory);
-  void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-  void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
-                         uint32_t height);
-
-  uint32_t findMemoryType(uint32_t typeFilter,
-                          VkMemoryPropertyFlags properties);
-
   void cleanupSwapChain();
   void recreateSwapChain();
 
@@ -173,32 +119,13 @@ class Application {
   void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
   void drawFrame();
 
-  bool isDeviceSuitable(VkPhysicalDevice device);
-
-  void populateDebugMessengerCreateInfo(
-      VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-
   VkPresentModeKHR choosePresentMode(
       const std::vector<VkPresentModeKHR>& modes);
   VkSurfaceFormatKHR chooseSurfaceFormat(
       const std::vector<VkSurfaceFormatKHR>& formats);
   VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-  SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-
-  std::vector<const char*> getRequiredExtensions();
 
   VkShaderModule createShaderModule(const std::vector<char>& code);
-
-  static VKAPI_ATTR VkBool32 VKAPI_CALL
-  debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                VkDebugUtilsMessageTypeFlagsEXT messageType,
-                const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                void* pUserData) {
-    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-
-    return VK_FALSE;
-  }
 };
 
 }  // namespace vkpt
