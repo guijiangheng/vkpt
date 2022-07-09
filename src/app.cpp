@@ -64,15 +64,7 @@ void Application::cleanup() {
   vkDestroyImage(device.getDevice(), textureImage, nullptr);
   vkFreeMemory(device.getDevice(), textureImageMemory, nullptr);
 
-  vkDestroyBuffer(device.getDevice(), vertexBuffer, nullptr);
-  vkFreeMemory(device.getDevice(), vertexBufferMemory, nullptr);
-  vkDestroyBuffer(device.getDevice(), indexBuffer, nullptr);
-  vkFreeMemory(device.getDevice(), indexBufferMemory, nullptr);
-
   for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-    vkDestroyBuffer(device.getDevice(), uniformBuffers[i], nullptr);
-    vkFreeMemory(device.getDevice(), uniformBuffersMemory[i], nullptr);
-
     vkDestroySemaphore(device.getDevice(), imageAvailableSemaphores[i],
                        nullptr);
     vkDestroySemaphore(device.getDevice(), renderFinishedSemaphores[i],
@@ -382,10 +374,11 @@ void Application::recordCommandBuffer(VkCommandBuffer commandBuffer,
                        VK_SUBPASS_CONTENTS_INLINE);
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     graphicsPipeline);
-  VkBuffer vertexBuffers[] = {vertexBuffer};
+  VkBuffer vertexBuffers[] = {vertexBuffer->getBuffer()};
   VkDeviceSize offsets[] = {0};
   vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-  vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+  vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0,
+                       VK_INDEX_TYPE_UINT16);
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           pipelineLayout, 0, 1, &descriptorSets[currentFrame],
                           0, nullptr);
@@ -422,63 +415,49 @@ void Application::createSyncObjects() {
 }
 
 void Application::createVertexBuffer() {
-  VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+  auto instanceCount = static_cast<uint32_t>(vertices.size());
+  Buffer stagingBuffer{device, sizeof(vertices[0]), instanceCount,
+                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
+  stagingBuffer.map();
+  stagingBuffer.writeToBuffer((void*)vertices.data());
 
-  VkBuffer stagingBuffer;
-  VkDeviceMemory stagingBufferMemory;
-  device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                      stagingBuffer, stagingBufferMemory);
-
-  void* data;
-  vkMapMemory(device.getDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
-  memcpy(data, vertices.data(), bufferSize);
-  vkUnmapMemory(device.getDevice(), stagingBufferMemory);
-
-  device.createBuffer(
-      bufferSize,
-      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-  device.copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-  vkDestroyBuffer(device.getDevice(), stagingBuffer, nullptr);
-  vkFreeMemory(device.getDevice(), stagingBufferMemory, nullptr);
+  vertexBuffer = std::make_unique<Buffer>(
+      device, sizeof(vertices[0]), instanceCount,
+      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  device.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(),
+                    sizeof(vertices[0]) * instanceCount);
 }
 
 void Application::createIndexBuffer() {
-  VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+  auto instanceCount = static_cast<uint32_t>(indices.size());
+  Buffer stagingBuffer{device, sizeof(indices[0]), instanceCount,
+                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
+  stagingBuffer.map();
+  stagingBuffer.writeToBuffer((void*)indices.data());
 
-  VkBuffer stagingBuffer;
-  VkDeviceMemory stagingBufferMemory;
-  device.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                      stagingBuffer, stagingBufferMemory);
-
-  void* data;
-  vkMapMemory(device.getDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
-  memcpy(data, indices.data(), bufferSize);
-  vkUnmapMemory(device.getDevice(), stagingBufferMemory);
-
-  device.createBuffer(
-      bufferSize,
+  indexBuffer = std::make_unique<Buffer>(
+      device, sizeof(indices[0]), instanceCount,
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-  device.copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-  vkDestroyBuffer(device.getDevice(), stagingBuffer, nullptr);
-  vkFreeMemory(device.getDevice(), stagingBufferMemory, nullptr);
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+  device.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(),
+                    sizeof(indices[0]) * instanceCount);
 }
 
 void Application::createUniformBuffers() {
   VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-  uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-  uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+  uniformBuffers.reserve(MAX_FRAMES_IN_FLIGHT);
 
   for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-    device.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                        uniformBuffers[i], uniformBuffersMemory[i]);
+    uniformBuffers.push_back(std::make_unique<Buffer>(
+        device, bufferSize, 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
   }
 }
 
@@ -590,9 +569,8 @@ void Application::createDescriptorSets() {
   }
 
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    VkDescriptorBufferInfo bufferInfo{.buffer = uniformBuffers[i],
-                                      .offset = 0,
-                                      .range = sizeof(UniformBufferObject)};
+    auto bufferInfo =
+        uniformBuffers[i]->getDescriptorInfo(sizeof(UniformBufferObject));
 
     VkDescriptorImageInfo imageInfo{
         .sampler = textureSampler,
@@ -678,11 +656,9 @@ void Application::updateUniformBuffer(uint32_t imageIndex) {
 
   ubo.proj[1][1] *= -1;
 
-  void* data;
-  vkMapMemory(device.getDevice(), uniformBuffersMemory[imageIndex], 0,
-              sizeof(ubo), 0, &data);
-  memcpy(data, &ubo, sizeof(ubo));
-  vkUnmapMemory(device.getDevice(), uniformBuffersMemory[imageIndex]);
+  uniformBuffers[imageIndex]->map();
+  uniformBuffers[imageIndex]->writeToBuffer((void*)&ubo);
+  uniformBuffers[imageIndex]->unmap();
 }
 
 void Application::drawFrame() {

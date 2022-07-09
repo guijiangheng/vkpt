@@ -4,9 +4,10 @@
 #include <array>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <memory>
 #include <vector>
 
-#include "device.h"
+#include "buffer.h"
 
 namespace vkpt {
 
@@ -74,12 +75,9 @@ class Application {
   VkDescriptorPool descriptorPool;
   std::vector<VkDescriptorSet> descriptorSets;
 
-  VkBuffer vertexBuffer;
-  VkDeviceMemory vertexBufferMemory;
-  VkBuffer indexBuffer;
-  VkDeviceMemory indexBufferMemory;
-  std::vector<VkBuffer> uniformBuffers;
-  std::vector<VkDeviceMemory> uniformBuffersMemory;
+  std::unique_ptr<Buffer> vertexBuffer;
+  std::unique_ptr<Buffer> indexBuffer;
+  std::vector<std::unique_ptr<Buffer>> uniformBuffers;
 
   VkImage textureImage;
   VkDeviceMemory textureImageMemory;
