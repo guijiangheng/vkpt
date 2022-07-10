@@ -15,7 +15,7 @@ class Window {
 
   bool shouldClose() const { return glfwWindowShouldClose(window); }
 
-  bool getFramebufferResized() const { return framebufferResized; }
+  bool isFramebufferResized() const { return framebufferResized; }
 
   void resetResizedFlag() { framebufferResized = false; }
 
@@ -27,6 +27,12 @@ class Window {
   }
 
   VkExtent2D getExtent() const {
+    return {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
+  }
+
+  VkExtent2D getFramebufferSize() {
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
     return {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
   }
 

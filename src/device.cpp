@@ -181,6 +181,25 @@ void Device::createCommandPool() {
   }
 }
 
+VkFormat Device::findSupportedFormat(const std::vector<VkFormat>& candidates,
+                                     VkImageTiling tiling,
+                                     VkFormatFeatureFlags features) {
+  for (VkFormat format : candidates) {
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+
+    if (tiling == VK_IMAGE_TILING_LINEAR &&
+        (props.linearTilingFeatures & features) == features) {
+      return format;
+    } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+               (props.optimalTilingFeatures & features) == features) {
+      return format;
+    }
+  }
+
+  throw std::runtime_error("failed to find supported format!");
+}
+
 uint32_t Device::findMemoryType(uint32_t typeFilter,
                                 VkMemoryPropertyFlags properties) {
   VkPhysicalDeviceMemoryProperties memProperties;
@@ -377,13 +396,14 @@ void Device::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
   endSingleTimeCommands(commandBuffer);
 }
 
-VkImageView Device::createImageView(VkImage image, VkFormat format) {
+VkImageView Device::createImageView(VkImage image, VkFormat format,
+                                    VkImageAspectFlags aspectFlags) {
   VkImageViewCreateInfo viewInfo{
       .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
       .image = image,
       .viewType = VK_IMAGE_VIEW_TYPE_2D,
       .format = format,
-      .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .subresourceRange = {.aspectMask = aspectFlags,
                            .baseMipLevel = 0,
                            .levelCount = 1,
                            .baseArrayLayer = 0,

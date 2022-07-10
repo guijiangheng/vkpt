@@ -8,10 +8,10 @@
 #include <vector>
 
 #include "buffer.h"
+#include "renderer.h"
+#include "swapchain.h"
 
 namespace vkpt {
-
-constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
 struct UniformBufferObject {
   glm::mat4 model;
@@ -55,22 +55,33 @@ class Application {
   void run();
 
  private:
+  void initVulkan();
+  void mainLoop();
+  void cleanup();
+
+  void createDescriptorSetLayout();
+  void createGraphicsPipeline();
+  void createVertexBuffer();
+  void createIndexBuffer();
+  void createUniformBuffers();
+  void createTextureImage();
+  void createTextureImageView();
+  void createTextureSampler();
+  void createDescriptorPool();
+  void createDescriptorSets();
+
+  void updateUniformBuffer(uint32_t currentImage);
+  void drawFrame();
+
+  VkShaderModule createShaderModule(const std::vector<char>& code);
+
   Window window{800, 600, "Vulkan"};
   Device device{window};
+  Renderer renderer{window, device};
 
-  VkSwapchainKHR swapChain;
-  std::vector<VkImage> swapChainImages;
-  VkFormat swapChainImageFormat;
-  VkExtent2D swapChainExtent;
-  std::vector<VkImageView> swapChainImageViews;
-  std::vector<VkFramebuffer> swapChainFramebuffers;
-
-  VkRenderPass renderPass;
   VkDescriptorSetLayout descriptorSetLayout;
   VkPipelineLayout pipelineLayout;
   VkPipeline graphicsPipeline;
-
-  std::vector<VkCommandBuffer> commandBuffers;
 
   VkDescriptorPool descriptorPool;
   std::vector<VkDescriptorSet> descriptorSets;
@@ -83,47 +94,6 @@ class Application {
   VkDeviceMemory textureImageMemory;
   VkImageView textureImageView;
   VkSampler textureSampler;
-
-  std::vector<VkSemaphore> imageAvailableSemaphores;
-  std::vector<VkSemaphore> renderFinishedSemaphores;
-  std::vector<VkFence> inFlightFences;
-  uint32_t currentFrame = 0;
-
-  void initVulkan();
-  void mainLoop();
-  void cleanup();
-
-  void createSwapChain();
-  void createImageViews();
-  void createRenderPass();
-  void createDescriptorSetLayout();
-  void createGraphicsPipeline();
-  void createFramebuffers();
-  void createCommandBuffers();
-  void createSyncObjects();
-  void createVertexBuffer();
-  void createIndexBuffer();
-  void createUniformBuffers();
-  void createTextureImage();
-  void createTextureImageView();
-  void createTextureSampler();
-  void createDescriptorPool();
-  void createDescriptorSets();
-
-  void cleanupSwapChain();
-  void recreateSwapChain();
-
-  void updateUniformBuffer(uint32_t currentImage);
-  void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-  void drawFrame();
-
-  VkPresentModeKHR choosePresentMode(
-      const std::vector<VkPresentModeKHR>& modes);
-  VkSurfaceFormatKHR chooseSurfaceFormat(
-      const std::vector<VkSurfaceFormatKHR>& formats);
-  VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-  VkShaderModule createShaderModule(const std::vector<char>& code);
 };
 
 }  // namespace vkpt
