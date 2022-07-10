@@ -1,11 +1,10 @@
 #pragma once
 
-#include "swapchain.h"
-#include "window.h"
-
-// std
 #include <cassert>
 #include <memory>
+
+#include "swapchain.h"
+#include "window.h"
 
 namespace vkpt {
 class Renderer {
