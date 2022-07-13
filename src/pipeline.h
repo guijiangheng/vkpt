@@ -47,4 +47,5 @@ class Pipeline {
   Device& device;
   VkPipeline graphicsPipeline;
 };
+
 }  // namespace vkpt

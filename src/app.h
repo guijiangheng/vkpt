@@ -10,6 +10,7 @@
 
 #include "buffer.h"
 #include "descriptor.h"
+#include "model.h"
 #include "pipeline.h"
 #include "renderer.h"
 #include "swapchain.h"
@@ -36,8 +37,6 @@ class Application {
   void createDescriptorPool();
   void createPipelineLayout();
   void createGraphicsPipeline();
-  void createVertexBuffer();
-  void createIndexBuffer();
   void createUniformBuffers();
   void createTextureImage();
   void createTextureImageView();
@@ -51,8 +50,7 @@ class Application {
   Renderer renderer{window, device};
   std::unique_ptr<Pipeline> pipeline;
 
-  std::unique_ptr<Buffer> vertexBuffer;
-  std::unique_ptr<Buffer> indexBuffer;
+  std::unique_ptr<Model> model;
   std::vector<std::unique_ptr<Buffer>> uniformBuffers;
 
   std::unique_ptr<DescriptorPool> globalDescriptorPool;

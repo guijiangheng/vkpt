@@ -1,41 +1,61 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
+#include <memory>
 #include <vector>
 
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+
+#include "buffer.h"
+#include "device.h"
 
 namespace vkpt {
 
-struct Vertex {
-  glm::vec2 pos;
-  glm::vec3 color;
-  glm::vec2 texCoord;
+class Model {
+ public:
+  struct Vertex {
+    glm::vec3 position;
+    glm::vec3 color;
+    glm::vec3 normal;
+    glm::vec2 uv;
 
-  static std::vector<VkVertexInputBindingDescription> getBindingDescriptions() {
-    return {{.binding = 0,
-             .stride = sizeof(Vertex),
-             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}};
-  }
+    static std::vector<VkVertexInputBindingDescription>
+    getBindingDescriptions();
+    static std::vector<VkVertexInputAttributeDescription>
+    getAttributeDescriptions();
 
-  static std::vector<VkVertexInputAttributeDescription>
-  getAttributeDescriptions() {
-    return {{.location = 0,
-             .binding = 0,
-             .format = VK_FORMAT_R32G32_SFLOAT,
-             .offset = offsetof(Vertex, pos)},
-            {.location = 1,
-             .binding = 0,
-             .format = VK_FORMAT_R32G32B32_SFLOAT,
-             .offset = offsetof(Vertex, color)},
-            {.location = 2,
-             .binding = 0,
-             .format = VK_FORMAT_R32G32_SFLOAT,
-             .offset = offsetof(Vertex, texCoord)}};
-  }
+    bool operator==(const Vertex &rhs) const {
+      return position == rhs.position && color == rhs.color &&
+             normal == rhs.normal && uv == rhs.uv;
+    }
+  };
+
+  struct Builder {
+    std::vector<Vertex> vertices{};
+    std::vector<uint32_t> indices{};
+
+    void loadModel(std::string filepath);
+  };
+
+  Model(Device &device, const Model::Builder &builder);
+
+  static std::unique_ptr<Model> createModelFromFile(Device &device,
+                                                    std::string filepath);
+
+  void bind(VkCommandBuffer commandBuffer);
+  void draw(VkCommandBuffer commandBuffer);
+
+ private:
+  void createVertexBuffers(const std::vector<Vertex> &vertices);
+  void createIndexBuffers(const std::vector<uint32_t> &indices);
+
+  Device &device;
+  std::unique_ptr<Buffer> vertexBuffer;
+  std::unique_ptr<Buffer> indexBuffer;
+  uint32_t vertexCount;
+  uint32_t indexCount;
+  bool hasIndexBuffer = false;
 };
 
-}  // namespace  vkpt
+}  // namespace vkpt

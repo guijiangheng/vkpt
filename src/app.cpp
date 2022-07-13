@@ -11,13 +11,6 @@
 
 namespace vkpt {
 
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
-const std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
-
 void Application::run() {
   initVulkan();
   mainLoop();
@@ -25,11 +18,17 @@ void Application::run() {
 }
 
 void Application::initVulkan() {
+  Model::Builder builder{
+      .vertices = {{.position = {-0.5f, -0.5f, 0.0f}, .uv = {1.0f, 0.0f}},
+                   {.position = {0.5f, -0.5f, 0.0f}, .uv = {0.0f, 0.0f}},
+                   {.position = {0.5f, 0.5f, 0.0f}, .uv = {0.0f, 1.0f}},
+                   {.position = {-0.5f, 0.5f, 0.0f}, .uv = {1.0f, 1.0f}}},
+      .indices = {0, 1, 2, 2, 3, 0}};
+  model = std::make_unique<Model>(device, builder);
+
   createDescriptorSetLayout();
   createPipelineLayout();
   createGraphicsPipeline();
-  createVertexBuffer();
-  createIndexBuffer();
   createUniformBuffers();
   createTextureImage();
   createTextureImageView();
@@ -113,41 +112,6 @@ void Application::createGraphicsPipeline() {
   config.pipelineLayout = pipelineLayout;
   pipeline = std::make_unique<Pipeline>(device, "../shaders/simple.vert.spv",
                                         "../shaders/simple.frag.spv", config);
-}
-
-void Application::createVertexBuffer() {
-  auto instanceCount = static_cast<uint32_t>(vertices.size());
-  Buffer stagingBuffer{device, sizeof(vertices[0]), instanceCount,
-                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
-  stagingBuffer.map();
-  stagingBuffer.writeToBuffer((void*)vertices.data());
-
-  vertexBuffer = std::make_unique<Buffer>(
-      device, sizeof(vertices[0]), instanceCount,
-      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-  device.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(),
-                    sizeof(vertices[0]) * instanceCount);
-}
-
-void Application::createIndexBuffer() {
-  auto instanceCount = static_cast<uint32_t>(indices.size());
-  Buffer stagingBuffer{device, sizeof(indices[0]), instanceCount,
-                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
-  stagingBuffer.map();
-  stagingBuffer.writeToBuffer((void*)indices.data());
-
-  indexBuffer = std::make_unique<Buffer>(
-      device, sizeof(indices[0]), instanceCount,
-      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-  device.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(),
-                    sizeof(indices[0]) * instanceCount);
 }
 
 void Application::createUniformBuffers() {
@@ -267,17 +231,11 @@ void Application::drawFrame() {
 
     renderer.beginRenderPass(commandBuffer);
     pipeline->bind(commandBuffer);
-
-    VkBuffer vertexBuffers[] = {vertexBuffer->getBuffer()};
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0,
-                         VK_INDEX_TYPE_UINT16);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipelineLayout, 0, 1, &descriptorSets[currentFrame],
                             0, nullptr);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0,
-                     0, 0);
+    model->bind(commandBuffer);
+    model->draw(commandBuffer);
 
     renderer.endRenderPass(commandBuffer);
     renderer.endFrame();

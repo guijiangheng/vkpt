@@ -75,8 +75,8 @@ void Pipeline::populateDefaultPipelineConfig(PipelineConfig& config) {
       .dynamicStateCount = static_cast<uint32_t>(config.dynamicStates.size()),
       .pDynamicStates = config.dynamicStates.data()};
 
-  config.bindingDescriptions = Vertex::getBindingDescriptions();
-  config.attributeDescriptions = Vertex::getAttributeDescriptions();
+  config.bindingDescriptions = Model::Vertex::getBindingDescriptions();
+  config.attributeDescriptions = Model::Vertex::getAttributeDescriptions();
 }
 
 void Pipeline::enableAlphaBlending(PipelineConfig& config) {

@@ -60,7 +60,11 @@
   },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
   "cSpell.words": [
+    "MIPMAP",
     "subresource",
-    "Swapchains"
+    "Swapchains",
+    "texcoords",
+    "tinyobj",
+    "unnormalized"
   ],
 }
