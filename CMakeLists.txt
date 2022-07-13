@@ -1,6 +1,3 @@
-include(./.env.cmake OPTIONAL RESULT_VARIABLE LOCAL_ENV)
-message(STATUS "Local .env.cmake: ${LOCAL_ENV}")
-
 cmake_minimum_required(VERSION 3.11.0)
 
 set(PROJECT_NAME vkpt)
@@ -11,7 +8,7 @@ project(
   LANGUAGES CXX
 )
 
-if (DEFINED VULKAN_SDK_PATH)
+if(DEFINED VULKAN_SDK_PATH)
   set(Vulkan_INCLUDE_DIRS "${VULKAN_SDK_PATH}/Include")
   set(Vulkan_LIBRARIES "${VULKAN_SDK_PATH}/Lib")
   set(Vulkan_FOUND "True")
@@ -20,25 +17,26 @@ else()
   message(STATUS "Found Vulkan: $ENV{VULKAN_SDK}")
 endif()
 
-if (NOT Vulkan_FOUND)
+if(NOT Vulkan_FOUND)
   message(FATAL_ERROR "Could not find Vulkan library!")
 else()
   message(STATUS "Using vulkan lib at: ${Vulkan_LIBRARIES}")
 endif()
 
-if (DEFINED GLFW_PATH)
+if(DEFINED GLFW_PATH)
   message(STATUS "Using GLFW path specified in .env")
   set(GLFW_INCLUDE_DIRS "${GLFW_PATH}/include")
-  if (MSVC)
+
+  if(MSVC)
     set(GLFW_LIB "${GLFW_PATH}/lib-vc2019")
   endif()
-else ()
+else()
   find_package(glfw3 3.3 REQUIRED)
   set(GLFW_LIB glfw)
   message(STATUS "Found GLFW")
 endif()
 
-if (NOT GLFW_LIB)
+if(NOT GLFW_LIB)
   message(FATAL_ERROR "Could not find glfw library!")
 else()
   message(STATUS "Using glfw lib at: ${GLFW_LIB}")
@@ -46,28 +44,13 @@ endif()
 
 include_directories(external)
 
-if (NOT TINYOBJ_PATH)
-  message(STATUS "TINYOBJ_PATH not specified in .env.cmake, using external/tinyobjloader")
-  set(TINYOBJ_PATH external/tinyobjloader)
-endif()
-
-if (NOT STB_INCLUDEDIR)
-  find_path (STB_INCLUDEDIR stb_image.h PATH_SUFFIXES stb)
-endif ()
-
-if (NOT STB_INCLUDEDIR)
-  message(FATAL_ERROR, "stb_image.h not found")
-endif()
-
-include_directories(${STB_INCLUDEDIR})
-
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/build")
 
-if (WIN32)
+if(WIN32)
   message(STATUS "CREATING BUILD FOR WINDOWS")
   target_include_directories(
     ${PROJECT_NAME} PUBLIC
@@ -83,7 +66,7 @@ if (WIN32)
     ${GLFW_LIB}
   )
   target_link_libraries(${PROJECT_NAME} glfw3 vulkan-1)
-elseif (UNIX)
+elseif(UNIX)
   message(STATUS "CREATING BUILD FOR UNIX")
   target_include_directories(
     ${PROJECT_NAME} PUBLIC
