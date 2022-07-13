@@ -9,6 +9,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "buffer.h"
+#include "descriptor.h"
 #include "pipeline.h"
 #include "renderer.h"
 #include "swapchain.h"
@@ -54,11 +55,11 @@ class Application {
   std::unique_ptr<Buffer> indexBuffer;
   std::vector<std::unique_ptr<Buffer>> uniformBuffers;
 
-  VkDescriptorSetLayout descriptorSetLayout;
-  VkPipelineLayout pipelineLayout;
-
-  VkDescriptorPool descriptorPool;
+  std::unique_ptr<DescriptorPool> globalDescriptorPool;
+  std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
   std::vector<VkDescriptorSet> descriptorSets;
+
+  VkPipelineLayout pipelineLayout;
 
   VkImage textureImage;
   VkDeviceMemory textureImageMemory;

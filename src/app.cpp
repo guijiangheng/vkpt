@@ -49,11 +49,6 @@ void Application::mainLoop() {
 
 void Application::cleanup() {
   vkDestroyPipelineLayout(device.getDevice(), pipelineLayout, nullptr);
-
-  vkDestroyDescriptorPool(device.getDevice(), descriptorPool, nullptr);
-  vkDestroyDescriptorSetLayout(device.getDevice(), descriptorSetLayout,
-                               nullptr);
-
   vkDestroySampler(device.getDevice(), textureSampler, nullptr);
   vkDestroyImageView(device.getDevice(), textureImageView, nullptr);
   vkDestroyImage(device.getDevice(), textureImage, nullptr);
@@ -61,103 +56,48 @@ void Application::cleanup() {
 }
 
 void Application::createDescriptorSetLayout() {
-  std::vector<VkDescriptorSetLayoutBinding> bindings = {
-      {.binding = 0,
-       .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-       .descriptorCount = 1,
-       .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-       .pImmutableSamplers = nullptr},
-
-      {.binding = 1,
-       .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-       .descriptorCount = 1,
-       .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-       .pImmutableSamplers = nullptr}};
-
-  VkDescriptorSetLayoutCreateInfo layoutInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-      .bindingCount = static_cast<uint32_t>(bindings.size()),
-      .pBindings = bindings.data()};
-
-  if (vkCreateDescriptorSetLayout(device.getDevice(), &layoutInfo, nullptr,
-                                  &descriptorSetLayout) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create descriptor set layout!");
-  }
+  descriptorSetLayout =
+      DescriptorSetLayout::Builder(device)
+          .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                      VK_SHADER_STAGE_VERTEX_BIT)
+          .addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                      VK_SHADER_STAGE_FRAGMENT_BIT)
+          .build();
 }
 
 void Application::createDescriptorSets() {
-  std::vector<VkDescriptorSetLayout> layouts(Renderer::MAX_FRAMES_IN_FLIGHT,
-                                             descriptorSetLayout);
-  VkDescriptorSetAllocateInfo allocInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-      .descriptorPool = descriptorPool,
-      .descriptorSetCount = Renderer::MAX_FRAMES_IN_FLIGHT,
-      .pSetLayouts = layouts.data()};
-
   descriptorSets.resize(Renderer::MAX_FRAMES_IN_FLIGHT);
-
-  if (vkAllocateDescriptorSets(device.getDevice(), &allocInfo,
-                               descriptorSets.data()) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate descriptor sets!");
-  }
 
   for (size_t i = 0; i < Renderer::MAX_FRAMES_IN_FLIGHT; i++) {
     auto bufferInfo =
         uniformBuffers[i]->getDescriptorInfo(sizeof(UniformBufferObject));
-
     VkDescriptorImageInfo imageInfo{
         .sampler = textureSampler,
         .imageView = textureImageView,
         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-
-    std::vector<VkWriteDescriptorSet> descriptorWrites = {
-        {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = descriptorSets[i],
-         .dstBinding = 0,
-         .dstArrayElement = 0,
-         .descriptorCount = 1,
-         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-         .pBufferInfo = &bufferInfo},
-
-        {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-         .dstSet = descriptorSets[i],
-         .dstBinding = 1,
-         .dstArrayElement = 0,
-         .descriptorCount = 1,
-         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-         .pImageInfo = &imageInfo},
-    };
-
-    vkUpdateDescriptorSets(device.getDevice(),
-                           static_cast<uint32_t>(descriptorWrites.size()),
-                           descriptorWrites.data(), 0, nullptr);
+    DescriptorWriter(*descriptorSetLayout, *globalDescriptorPool)
+        .writeBuffer(0, &bufferInfo)
+        .writeImage(1, &imageInfo)
+        .build(descriptorSets[i]);
   }
 }
 
 void Application::createDescriptorPool() {
-  std::vector<VkDescriptorPoolSize> poolSizes = {
-      {.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-       .descriptorCount = Renderer::MAX_FRAMES_IN_FLIGHT},
-      {.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-       .descriptorCount = Renderer::MAX_FRAMES_IN_FLIGHT}};
-
-  VkDescriptorPoolCreateInfo poolInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-      .maxSets = Renderer::MAX_FRAMES_IN_FLIGHT,
-      .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
-      .pPoolSizes = poolSizes.data()};
-
-  if (vkCreateDescriptorPool(device.getDevice(), &poolInfo, nullptr,
-                             &descriptorPool) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create descriptor pool!");
-  }
+  globalDescriptorPool =
+      DescriptorPool::Builder(device)
+          .setMaxSets(Renderer::MAX_FRAMES_IN_FLIGHT)
+          .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                       Renderer::MAX_FRAMES_IN_FLIGHT)
+          .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                       Renderer::MAX_FRAMES_IN_FLIGHT)
+          .build();
 }
 
 void Application::createPipelineLayout() {
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
       .setLayoutCount = 1,
-      .pSetLayouts = &descriptorSetLayout,
+      .pSetLayouts = &descriptorSetLayout->getDescriptorSetLayout(),
       .pushConstantRangeCount = 0};
 
   if (vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr,
