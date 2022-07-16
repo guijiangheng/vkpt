@@ -42,7 +42,7 @@ class Application {
   void createTextureImageView();
   void createTextureSampler();
 
-  void updateUniformBuffer(uint32_t currentImage);
+  void updateUniformBuffer();
   void drawFrame();
 
   Window window{800, 600, "Vulkan"};
@@ -51,12 +51,11 @@ class Application {
   std::unique_ptr<Pipeline> pipeline;
 
   std::unique_ptr<Model> model;
-  std::vector<std::unique_ptr<Buffer>> uniformBuffers;
+  std::unique_ptr<Buffer> uniformBuffer;
 
   std::unique_ptr<DescriptorPool> globalDescriptorPool;
   std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
-  std::vector<VkDescriptorSet> descriptorSets;
-
+  VkDescriptorSet descriptorSet;
   VkPipelineLayout pipelineLayout;
 
   VkImage textureImage;

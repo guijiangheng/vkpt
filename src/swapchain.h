@@ -16,13 +16,11 @@ class SwapChain {
 
   ~SwapChain();
 
-  VkFramebuffer getFrameBuffer(int index) {
-    return swapChainFramebuffers[index];
-  }
+  VkFramebuffer getFrameBuffer(int index) { return framebuffers[index]; }
 
   VkExtent2D getExtent() { return swapChainExtent; }
   VkImageView getImageView(int index) { return swapChainImageViews[index]; }
-  VkSwapchainKHR &getSwapChain() { return swapChain; }
+  VkSwapchainKHR getSwapChain() { return swapChain; }
   VkRenderPass getRenderPass() { return renderPass; }
 
   float getAspectRatio() {
@@ -33,8 +31,6 @@ class SwapChain {
   VkFormat findDepthFormat();
 
   VkResult acquireNextImage(uint32_t *imageIndex);
-  VkResult submitCommandBuffers(const VkCommandBuffer *buffers,
-                                uint32_t *imageIndex);
 
  private:
   void init();
@@ -57,12 +53,13 @@ class SwapChain {
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
 
-  std::vector<VkFramebuffer> swapChainFramebuffers;
+  std::vector<VkFramebuffer> framebuffers;
   VkRenderPass renderPass;
 
-  std::vector<VkImage> depthImages;
-  std::vector<VkDeviceMemory> depthImageMemories;
-  std::vector<VkImageView> depthImageViews;
+  VkImage depthImage;
+  VkDeviceMemory depthImageMemory;
+  VkImageView depthImageView;
+
   std::vector<VkImage> swapChainImages;
   std::vector<VkImageView> swapChainImageViews;
 

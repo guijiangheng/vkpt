@@ -65,38 +65,34 @@ void Application::createDescriptorSetLayout() {
 }
 
 void Application::createDescriptorSets() {
-  descriptorSets.resize(Renderer::MAX_FRAMES_IN_FLIGHT);
-
-  for (size_t i = 0; i < Renderer::MAX_FRAMES_IN_FLIGHT; i++) {
-    auto bufferInfo =
-        uniformBuffers[i]->getDescriptorInfo(sizeof(UniformBufferObject));
-    VkDescriptorImageInfo imageInfo{
-        .sampler = textureSampler,
-        .imageView = textureImageView,
-        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
-    DescriptorWriter(*descriptorSetLayout, *globalDescriptorPool)
-        .writeBuffer(0, &bufferInfo)
-        .writeImage(1, &imageInfo)
-        .build(descriptorSets[i]);
-  }
+  auto bufferInfo =
+      uniformBuffer->getDescriptorInfo(sizeof(UniformBufferObject));
+  VkDescriptorImageInfo imageInfo{
+      .sampler = textureSampler,
+      .imageView = textureImageView,
+      .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+  DescriptorWriter(*descriptorSetLayout, *globalDescriptorPool)
+      .writeBuffer(0, &bufferInfo)
+      .writeImage(1, &imageInfo)
+      .build(descriptorSet);
 }
 
 void Application::createDescriptorPool() {
   globalDescriptorPool =
       DescriptorPool::Builder(device)
-          .setMaxSets(Renderer::MAX_FRAMES_IN_FLIGHT)
-          .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                       Renderer::MAX_FRAMES_IN_FLIGHT)
-          .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                       Renderer::MAX_FRAMES_IN_FLIGHT)
+          .setMaxSets(1)
+          .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
+          .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
           .build();
 }
 
 void Application::createPipelineLayout() {
+  VkDescriptorSetLayout setLayouts[] = {
+      descriptorSetLayout->getDescriptorSetLayout()};
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
       .setLayoutCount = 1,
-      .pSetLayouts = &descriptorSetLayout->getDescriptorSetLayout(),
+      .pSetLayouts = setLayouts,
       .pushConstantRangeCount = 0};
 
   if (vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr,
@@ -108,22 +104,18 @@ void Application::createPipelineLayout() {
 void Application::createGraphicsPipeline() {
   PipelineConfig config{};
   Pipeline::populateDefaultPipelineConfig(config);
-  config.renderPass = renderer.getRenderPass();
+  config.renderPass = renderer.getSwapchain()->getRenderPass();
   config.pipelineLayout = pipelineLayout;
   pipeline = std::make_unique<Pipeline>(device, "../shaders/simple.vert.spv",
                                         "../shaders/simple.frag.spv", config);
 }
 
 void Application::createUniformBuffers() {
-  VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-  uniformBuffers.reserve(Renderer::MAX_FRAMES_IN_FLIGHT);
-
-  for (uint32_t i = 0; i < Renderer::MAX_FRAMES_IN_FLIGHT; ++i) {
-    uniformBuffers.push_back(std::make_unique<Buffer>(
-        device, bufferSize, 1, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
-  }
+  uniformBuffer =
+      std::make_unique<Buffer>(device, sizeof(UniformBufferObject), 1,
+                               VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 void Application::createTextureImage() {
@@ -198,7 +190,7 @@ void Application::createTextureSampler() {
   }
 }
 
-void Application::updateUniformBuffer(uint32_t imageIndex) {
+void Application::updateUniformBuffer() {
   static auto startTime = std::chrono::high_resolution_clock::now();
 
   auto currentTime = std::chrono::high_resolution_clock::now();
@@ -206,7 +198,7 @@ void Application::updateUniformBuffer(uint32_t imageIndex) {
                    currentTime - startTime)
                    .count();
 
-  auto extent = renderer.getSwapchainExtent();
+  auto extent = renderer.getSwapchain()->getExtent();
   UniformBufferObject ubo{
       .model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f),
                            glm::vec3(0.0f, 0.0f, 1.0f)),
@@ -219,21 +211,19 @@ void Application::updateUniformBuffer(uint32_t imageIndex) {
 
   ubo.proj[1][1] *= -1;
 
-  uniformBuffers[imageIndex]->map();
-  uniformBuffers[imageIndex]->writeToBuffer((void*)&ubo);
-  uniformBuffers[imageIndex]->unmap();
+  uniformBuffer->map();
+  uniformBuffer->writeToBuffer((void*)&ubo);
+  uniformBuffer->unmap();
 }
 
 void Application::drawFrame() {
   if (auto commandBuffer = renderer.beginFrame()) {
-    auto currentFrame = renderer.getCurrentFrame();
-    updateUniformBuffer(currentFrame);
+    updateUniformBuffer();
 
     renderer.beginRenderPass(commandBuffer);
     pipeline->bind(commandBuffer);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipelineLayout, 0, 1, &descriptorSets[currentFrame],
-                            0, nullptr);
+                            pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
     model->bind(commandBuffer);
     model->draw(commandBuffer);
 

@@ -37,13 +37,11 @@ SwapChain::~SwapChain() {
 
   vkDestroySwapchainKHR(device.getDevice(), swapChain, nullptr);
 
-  for (int i = 0; i < depthImages.size(); i++) {
-    vkDestroyImageView(device.getDevice(), depthImageViews[i], nullptr);
-    vkDestroyImage(device.getDevice(), depthImages[i], nullptr);
-    vkFreeMemory(device.getDevice(), depthImageMemories[i], nullptr);
-  }
+  vkDestroyImageView(device.getDevice(), depthImageView, nullptr);
+  vkDestroyImage(device.getDevice(), depthImage, nullptr);
+  vkFreeMemory(device.getDevice(), depthImageMemory, nullptr);
 
-  for (auto framebuffer : swapChainFramebuffers) {
+  for (auto framebuffer : framebuffers) {
     vkDestroyFramebuffer(device.getDevice(), framebuffer, nullptr);
   }
 
@@ -181,14 +179,14 @@ void SwapChain::createRenderPass() {
                          &renderPass) != VK_SUCCESS) {
     throw std::runtime_error("failed to create render pass!");
   }
-}  // namespace vkpt
+}
 
 void SwapChain::createFramebuffers() {
   auto n = swapChainImages.size();
-  swapChainFramebuffers.resize(n);
+  framebuffers.resize(n);
   for (size_t i = 0; i < n; i++) {
     std::array<VkImageView, 2> attachments = {swapChainImageViews[i],
-                                              depthImageViews[i]};
+                                              depthImageView};
     VkFramebufferCreateInfo framebufferInfo = {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         .renderPass = renderPass,
@@ -199,29 +197,20 @@ void SwapChain::createFramebuffers() {
         .layers = 1};
 
     if (vkCreateFramebuffer(device.getDevice(), &framebufferInfo, nullptr,
-                            &swapChainFramebuffers[i]) != VK_SUCCESS) {
+                            &framebuffers[i]) != VK_SUCCESS) {
       throw std::runtime_error("failed to create framebuffer!");
     }
   }
 }
 
 void SwapChain::createDepthResources() {
-  auto n = swapChainImages.size();
   auto depthFormat = findDepthFormat();
-
-  depthImages.resize(n);
-  depthImageMemories.resize(n);
-  depthImageViews.reserve(n);
-
-  for (int i = 0; i < n; i++) {
-    device.createImage(swapChainExtent.width, swapChainExtent.height,
-                       depthFormat, VK_IMAGE_TILING_OPTIMAL,
-                       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImages[i],
-                       depthImageMemories[i]);
-    depthImageViews.push_back(device.createImageView(
-        depthImages[i], depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT));
-  }
+  device.createImage(
+      swapChainExtent.width, swapChainExtent.height, depthFormat,
+      VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
+  depthImageView = device.createImageView(depthImage, depthFormat,
+                                          VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
 VkSurfaceFormatKHR SwapChain::chooseSurfaceFormat(

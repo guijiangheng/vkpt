@@ -56,7 +56,12 @@
     "set": "cpp",
     "chrono": "cpp",
     "ctime": "cpp",
-    "ratio": "cpp"
+    "ratio": "cpp",
+    "span": "cpp",
+    "semaphore": "cpp",
+    "stop_token": "cpp",
+    "thread": "cpp",
+    "cassert": "cpp"
   },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
   "cSpell.words": [
