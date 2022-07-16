@@ -14,6 +14,7 @@
 #include "pipeline.h"
 #include "renderer.h"
 #include "swapchain.h"
+#include "texture.h"
 
 namespace vkpt {
 
@@ -29,6 +30,7 @@ class Application {
 
  private:
   void initVulkan();
+  void loadModels();
   void mainLoop();
   void cleanup();
 
@@ -37,10 +39,7 @@ class Application {
   void createDescriptorPool();
   void createPipelineLayout();
   void createGraphicsPipeline();
-  void createUniformBuffers();
-  void createTextureImage();
-  void createTextureImageView();
-  void createTextureSampler();
+  void createUniformBuffer();
 
   void updateUniformBuffer();
   void drawFrame();
@@ -52,16 +51,12 @@ class Application {
 
   std::unique_ptr<Model> model;
   std::unique_ptr<Buffer> uniformBuffer;
+  Texture texture{device, "../textures/texture.jpg"};
 
   std::unique_ptr<DescriptorPool> globalDescriptorPool;
   std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
   VkDescriptorSet descriptorSet;
   VkPipelineLayout pipelineLayout;
-
-  VkImage textureImage;
-  VkDeviceMemory textureImageMemory;
-  VkImageView textureImageView;
-  VkSampler textureSampler;
 };
 
 }  // namespace vkpt

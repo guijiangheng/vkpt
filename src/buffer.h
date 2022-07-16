@@ -44,9 +44,9 @@ class Buffer {
                                    VkDeviceSize minOffsetAlignment);
 
   Device& device;
-  void* mapped = nullptr;
-  VkBuffer buffer = VK_NULL_HANDLE;
-  VkDeviceMemory memory = VK_NULL_HANDLE;
+  void* mapped{nullptr};
+  VkBuffer buffer{nullptr};
+  VkDeviceMemory memory{nullptr};
 
   VkDeviceSize bufferSize;
   uint32_t instanceCount;

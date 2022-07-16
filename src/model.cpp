@@ -37,8 +37,7 @@ Model::Model(Device &device, const Model::Builder &builder) : device{device} {
   createIndexBuffers(builder.indices);
 }
 
-std::unique_ptr<Model> Model::createModelFromFile(Device &device,
-                                                  std::string filepath) {
+std::unique_ptr<Model> Model::fromFile(Device &device, std::string filepath) {
   Builder builder{};
   builder.loadModel(ENGINE_DIR + filepath);
 

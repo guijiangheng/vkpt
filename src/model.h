@@ -40,8 +40,7 @@ class Model {
 
   Model(Device &device, const Model::Builder &builder);
 
-  static std::unique_ptr<Model> createModelFromFile(Device &device,
-                                                    std::string filepath);
+  static std::unique_ptr<Model> fromFile(Device &device, std::string filepath);
 
   void bind(VkCommandBuffer commandBuffer);
   void draw(VkCommandBuffer commandBuffer);
