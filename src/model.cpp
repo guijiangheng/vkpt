@@ -12,10 +12,6 @@
 
 #include "utils.h"
 
-#ifndef ENGINE_DIR
-#define ENGINE_DIR "../"
-#endif
-
 namespace std {
 
 template <>
@@ -39,7 +35,7 @@ Model::Model(Device &device, const Model::Builder &builder) : device{device} {
 
 std::unique_ptr<Model> Model::fromFile(Device &device, std::string filepath) {
   Builder builder{};
-  builder.loadModel(ENGINE_DIR + filepath);
+  builder.loadModel(filepath);
 
   return std::make_unique<Model>(device, builder);
 }

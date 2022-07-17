@@ -4,13 +4,18 @@
 #include <cstring>
 #include <limits>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "model.h"
 
 namespace vkpt {
 
 void Application::run() {
-  initVulkan();
   loadModels();
+  initVulkan();
   mainLoop();
   cleanup();
 }
@@ -25,13 +30,8 @@ void Application::initVulkan() {
 }
 
 void Application::loadModels() {
-  Model::Builder builder{
-      .vertices = {{.position = {-0.5f, -0.5f, 0.0f}, .uv = {1.0f, 0.0f}},
-                   {.position = {0.5f, -0.5f, 0.0f}, .uv = {0.0f, 0.0f}},
-                   {.position = {0.5f, 0.5f, 0.0f}, .uv = {0.0f, 1.0f}},
-                   {.position = {-0.5f, 0.5f, 0.0f}, .uv = {1.0f, 1.0f}}},
-      .indices = {0, 1, 2, 2, 3, 0}};
-  model = std::make_unique<Model>(device, builder);
+  model = Model::fromFile(device, "../resources/viking_room.obj");
+  texture = std::make_unique<Texture>(device, "../resources/viking_room.png");
 }
 
 void Application::mainLoop() {
@@ -60,7 +60,7 @@ void Application::createDescriptorSetLayout() {
 void Application::createDescriptorSets() {
   auto bufferInfo =
       uniformBuffer->getDescriptorInfo(sizeof(UniformBufferObject));
-  auto imageInfo = texture.getImageInfo();
+  auto imageInfo = texture->getImageInfo();
   DescriptorWriter(*descriptorSetLayout, *globalDescriptorPool)
       .writeBuffer(0, &bufferInfo)
       .writeImage(1, &imageInfo)
@@ -112,9 +112,9 @@ void Application::updateUniformBuffer() {
   static auto startTime = std::chrono::high_resolution_clock::now();
 
   auto currentTime = std::chrono::high_resolution_clock::now();
-  float time = std::chrono::duration<float, std::chrono::seconds::period>(
-                   currentTime - startTime)
-                   .count();
+  auto time = std::chrono::duration<float, std::chrono::seconds::period>(
+                  currentTime - startTime)
+                  .count();
 
   auto extent = renderer.getSwapchain()->getExtent();
   UniformBufferObject ubo{
@@ -137,14 +137,12 @@ void Application::updateUniformBuffer() {
 void Application::drawFrame() {
   if (auto commandBuffer = renderer.beginFrame()) {
     updateUniformBuffer();
-
     renderer.beginRenderPass(commandBuffer);
     pipeline->bind(commandBuffer);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
     model->bind(commandBuffer);
     model->draw(commandBuffer);
-
     renderer.endRenderPass(commandBuffer);
     renderer.endFrame();
   }

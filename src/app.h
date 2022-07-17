@@ -29,8 +29,8 @@ class Application {
   void run();
 
  private:
-  void initVulkan();
   void loadModels();
+  void initVulkan();
   void mainLoop();
   void cleanup();
 
@@ -51,7 +51,7 @@ class Application {
 
   std::unique_ptr<Model> model;
   std::unique_ptr<Buffer> uniformBuffer;
-  Texture texture{device, "../textures/texture.jpg"};
+  std::unique_ptr<Texture> texture;
 
   std::unique_ptr<DescriptorPool> globalDescriptorPool;
   std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
