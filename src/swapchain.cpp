@@ -113,8 +113,9 @@ void SwapChain::createImageViews() {
   auto n = swapChainImages.size();
   swapChainImageViews.reserve(n);
   for (size_t i = 0; i < n; i++) {
-    swapChainImageViews.push_back(device.createImageView(
-        swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT));
+    swapChainImageViews.push_back(
+        device.createImageView(swapChainImages[i], swapChainImageFormat,
+                               VK_IMAGE_ASPECT_COLOR_BIT, 1));
   }
 }
 
@@ -206,11 +207,11 @@ void SwapChain::createFramebuffers() {
 void SwapChain::createDepthResources() {
   auto depthFormat = findDepthFormat();
   device.createImage(
-      swapChainExtent.width, swapChainExtent.height, depthFormat,
+      swapChainExtent.width, swapChainExtent.height, 1, depthFormat,
       VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
   depthImageView = device.createImageView(depthImage, depthFormat,
-                                          VK_IMAGE_ASPECT_DEPTH_BIT);
+                                          VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 }
 
 VkSurfaceFormatKHR SwapChain::chooseSurfaceFormat(

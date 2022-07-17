@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <memory>
 #include <string>
 
@@ -12,8 +13,8 @@ class Texture {
   Texture(Device &device, std::string filepath);
   ~Texture();
 
-  int getWidth() { return width; }
-  int getHeight() { return height; }
+  uint32_t getWidth() { return width; }
+  uint32_t getHeight() { return height; }
 
   VkDescriptorImageInfo getImageInfo() {
     return {.sampler = sampler,
@@ -22,6 +23,12 @@ class Texture {
   }
 
  private:
+  static uint32_t getMipLevels(uint32_t width, uint32_t height) {
+    return static_cast<uint32_t>(
+               std::floor(std::log2(std::max(width, height)))) +
+           1;
+  }
+
   void createImage(std::string filepath);
   void createImageView();
   void createSampler();
@@ -31,8 +38,9 @@ class Texture {
   VkDeviceMemory imageMemory{nullptr};
   VkImageView imageView{nullptr};
   VkSampler sampler{nullptr};
-  int width{0};
-  int height{0};
+  uint32_t width{0};
+  uint32_t height{0};
+  uint32_t mipLevels{0};
 };
 
 }  // namespace vkpt

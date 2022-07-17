@@ -394,36 +394,16 @@ void Device::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
   endSingleTimeCommands(commandBuffer);
 }
 
-VkImageView Device::createImageView(VkImage image, VkFormat format,
-                                    VkImageAspectFlags aspectFlags) {
-  VkImageViewCreateInfo viewInfo{
-      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-      .image = image,
-      .viewType = VK_IMAGE_VIEW_TYPE_2D,
-      .format = format,
-      .subresourceRange = {.aspectMask = aspectFlags,
-                           .baseMipLevel = 0,
-                           .levelCount = 1,
-                           .baseArrayLayer = 0,
-                           .layerCount = 1}};
-
-  VkImageView imageView;
-  if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create texture image view!");
-  }
-
-  return imageView;
-}
-
-void Device::createImage(uint32_t width, uint32_t height, VkFormat format,
-                         VkImageTiling tiling, VkImageUsageFlags usage,
+void Device::createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
+                         VkFormat format, VkImageTiling tiling,
+                         VkImageUsageFlags usage,
                          VkMemoryPropertyFlags properties, VkImage& image,
                          VkDeviceMemory& imageMemory) {
   VkImageCreateInfo imageInfo{.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
                               .imageType = VK_IMAGE_TYPE_2D,
                               .format = format,
                               .extent = {width, height, 1},
-                              .mipLevels = 1,
+                              .mipLevels = mipLevels,
                               .arrayLayers = 1,
                               .samples = VK_SAMPLE_COUNT_1_BIT,
                               .tiling = tiling,
@@ -452,9 +432,32 @@ void Device::createImage(uint32_t width, uint32_t height, VkFormat format,
   vkBindImageMemory(device, image, imageMemory, 0);
 }
 
+VkImageView Device::createImageView(VkImage image, VkFormat format,
+                                    VkImageAspectFlags aspectFlags,
+                                    uint32_t mipLevels) {
+  VkImageViewCreateInfo viewInfo{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+      .image = image,
+      .viewType = VK_IMAGE_VIEW_TYPE_2D,
+      .format = format,
+      .subresourceRange = {.aspectMask = aspectFlags,
+                           .baseMipLevel = 0,
+                           .levelCount = mipLevels,
+                           .baseArrayLayer = 0,
+                           .layerCount = 1}};
+
+  VkImageView imageView;
+  if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create texture image view!");
+  }
+
+  return imageView;
+}
+
 void Device::transitionImageLayout(VkImage image, VkFormat format,
                                    VkImageLayout oldLayout,
-                                   VkImageLayout newLayout) {
+                                   VkImageLayout newLayout,
+                                   uint32_t mipLevels) {
   auto commandBuffer = beginSingleTimeCommands();
 
   VkImageMemoryBarrier barrier{
@@ -466,7 +469,7 @@ void Device::transitionImageLayout(VkImage image, VkFormat format,
       .image = image,
       .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                            .baseMipLevel = 0,
-                           .levelCount = 1,
+                           .levelCount = mipLevels,
                            .baseArrayLayer = 0,
                            .layerCount = 1}};
 
@@ -493,6 +496,86 @@ void Device::transitionImageLayout(VkImage image, VkFormat format,
 
   vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0,
                        nullptr, 0, nullptr, 1, &barrier);
+
+  endSingleTimeCommands(commandBuffer);
+}
+
+void Device::generateMipmaps(VkImage image, VkFormat format, uint32_t width,
+                             uint32_t height, uint32_t mipLevels) {
+  VkFormatProperties formatProperties;
+  vkGetPhysicalDeviceFormatProperties(physicalDevice, format,
+                                      &formatProperties);
+
+  if (!(formatProperties.optimalTilingFeatures &
+        VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+    throw std::runtime_error(
+        "texture image format does not support linear blitting!");
+  }
+
+  auto commandBuffer = beginSingleTimeCommands();
+
+  VkImageMemoryBarrier barrier{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .image = image,
+      .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                           .levelCount = 1,
+                           .baseArrayLayer = 0,
+                           .layerCount = 1}};
+
+  int32_t mipWidth = static_cast<int32_t>(width);
+  int32_t mipHeight = static_cast<int32_t>(height);
+
+  for (uint32_t i = 1; i < mipLevels; ++i) {
+    barrier.subresourceRange.baseMipLevel = i - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &barrier);
+
+    VkImageBlit blit{.srcSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                        .mipLevel = i - 1,
+                                        .baseArrayLayer = 0,
+                                        .layerCount = 1},
+                     .srcOffsets = {{0, 0, 0}, {mipWidth, mipHeight, 1}},
+                     .dstSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                        .mipLevel = i,
+                                        .baseArrayLayer = 0,
+                                        .layerCount = 1},
+                     .dstOffsets = {{0, 0, 0},
+                                    {mipWidth > 1 ? mipWidth / 2 : 1,
+                                     mipHeight > 1 ? mipHeight / 2 : 1, 1}}};
+    vkCmdBlitImage(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit,
+                   VK_FILTER_LINEAR);
+
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr,
+                         0, nullptr, 1, &barrier);
+
+    if (mipWidth > 1) mipWidth /= 2;
+    if (mipHeight > 1) mipHeight /= 2;
+  }
+
+  barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+  barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+  vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                       VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0,
+                       nullptr, 1, &barrier);
 
   endSingleTimeCommands(commandBuffer);
 }

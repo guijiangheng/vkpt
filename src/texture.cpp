@@ -19,9 +19,12 @@ Texture::~Texture() {
 }
 
 void Texture::createImage(std::string filepath) {
-  int texChannels;
-  auto* pixels = stbi_load(filepath.c_str(), &width, &height, &texChannels,
-                           STBI_rgb_alpha);
+  int w, h, texChannels;
+  auto* pixels =
+      stbi_load(filepath.c_str(), &w, &h, &texChannels, STBI_rgb_alpha);
+  width = static_cast<uint32_t>(w);
+  height = static_cast<uint32_t>(h);
+  mipLevels = getMipLevels(width, height);
   VkDeviceSize imageSize = width * height * 4;
 
   if (!pixels) {
@@ -42,27 +45,27 @@ void Texture::createImage(std::string filepath) {
 
   stbi_image_free(pixels);
 
-  device.createImage(
-      width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, imageMemory);
+  device.createImage(width, height, mipLevels, VK_FORMAT_R8G8B8A8_SRGB,
+                     VK_IMAGE_TILING_OPTIMAL,
+                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                         VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                         VK_IMAGE_USAGE_SAMPLED_BIT,
+                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, image, imageMemory);
 
   device.transitionImageLayout(image, VK_FORMAT_R8G8B8A8_SRGB,
                                VK_IMAGE_LAYOUT_UNDEFINED,
-                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
   device.copyBufferToImage(stagingBuffer, image, static_cast<uint32_t>(width),
                            static_cast<uint32_t>(height));
-  device.transitionImageLayout(image, VK_FORMAT_R8G8B8A8_SRGB,
-                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
   vkDestroyBuffer(device.getDevice(), stagingBuffer, nullptr);
   vkFreeMemory(device.getDevice(), stagingBufferMemory, nullptr);
+  device.generateMipmaps(image, VK_FORMAT_R8G8B8A8_SRGB, width, height,
+                         mipLevels);
 }
 
 void Texture::createImageView() {
   imageView = device.createImageView(image, VK_FORMAT_R8G8B8A8_SRGB,
-                                     VK_IMAGE_ASPECT_COLOR_BIT);
+                                     VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 }
 
 void Texture::createSampler() {
@@ -76,10 +79,13 @@ void Texture::createSampler() {
       .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
       .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
       .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+      .mipLodBias = 0.0f,
       .anisotropyEnable = VK_TRUE,
       .maxAnisotropy = properties.limits.maxSamplerAnisotropy,
       .compareEnable = VK_FALSE,
       .compareOp = VK_COMPARE_OP_ALWAYS,
+      .minLod = 0.0f,
+      .maxLod = static_cast<float>(mipLevels),
       .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
       .unnormalizedCoordinates = VK_FALSE};
 

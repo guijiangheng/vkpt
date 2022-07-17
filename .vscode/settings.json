@@ -65,7 +65,10 @@
   },
   "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
   "cSpell.words": [
+    "Blit",
+    "blitting",
     "MIPMAP",
+    "Mipmaps",
     "STBI",
     "subresource",
     "Swapchains",
