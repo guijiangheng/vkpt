@@ -40,6 +40,7 @@ class Device {
   VkSurfaceKHR getSurface() { return surface; }
   VkQueue getGraphicsQueue() { return graphicsQueue; }
   VkQueue getPresentQueue() { return presentQueue; }
+  VkSampleCountFlagBits getMsaaSamples() { return msaaSamples; }
   VkPhysicalDeviceProperties &getPhysicalDeviceProperties() {
     return properties;
   }
@@ -67,9 +68,10 @@ class Device {
                          uint32_t height);
 
   void createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
-                   VkFormat format, VkImageTiling tiling,
-                   VkImageUsageFlags usage, VkMemoryPropertyFlags properties,
-                   VkImage &image, VkDeviceMemory &imageMemory);
+                   VkSampleCountFlagBits numSamples, VkFormat format,
+                   VkImageTiling tiling, VkImageUsageFlags usage,
+                   VkMemoryPropertyFlags properties, VkImage &image,
+                   VkDeviceMemory &imageMemory);
   VkImageView createImageView(VkImage image, VkFormat format,
                               VkImageAspectFlags aspectFlags,
                               uint32_t mipLevels);
@@ -91,11 +93,14 @@ class Device {
   void createCommandPool();
 
   bool isDeviceSuitable(VkPhysicalDevice device);
-  std::vector<const char *> getRequiredExtensions();
   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+  SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+
+  std::vector<const char *> getRequiredExtensions();
+  VkSampleCountFlagBits getMaxUsableSampleCount();
+
   void populateDebugMessengerCreateInfo(
       VkDebugUtilsMessengerCreateInfoEXT &createInfo);
-  SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
   static VKAPI_ATTR VkBool32 VKAPI_CALL
   debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -119,6 +124,7 @@ class Device {
   VkQueue presentQueue;
 
   VkPhysicalDeviceProperties properties;
+  VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
   const std::vector<const char *> validationLayers = {
       "VK_LAYER_KHRONOS_validation"};

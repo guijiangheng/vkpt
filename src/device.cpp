@@ -129,6 +129,7 @@ void Device::pickPhysicalDevice() {
   }
 
   vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+  msaaSamples = getMaxUsableSampleCount();
 }
 
 void Device::createLogicalDevice() {
@@ -306,6 +307,20 @@ std::vector<const char*> Device::getRequiredExtensions() {
   return extensions;
 }
 
+VkSampleCountFlagBits Device::getMaxUsableSampleCount() {
+  auto counts = properties.limits.framebufferColorSampleCounts &
+                properties.limits.framebufferDepthSampleCounts;
+
+  if (counts & VK_SAMPLE_COUNT_64_BIT) return VK_SAMPLE_COUNT_64_BIT;
+  if (counts & VK_SAMPLE_COUNT_32_BIT) return VK_SAMPLE_COUNT_32_BIT;
+  if (counts & VK_SAMPLE_COUNT_16_BIT) return VK_SAMPLE_COUNT_16_BIT;
+  if (counts & VK_SAMPLE_COUNT_8_BIT) return VK_SAMPLE_COUNT_8_BIT;
+  if (counts & VK_SAMPLE_COUNT_4_BIT) return VK_SAMPLE_COUNT_4_BIT;
+  if (counts & VK_SAMPLE_COUNT_2_BIT) return VK_SAMPLE_COUNT_2_BIT;
+
+  return VK_SAMPLE_COUNT_1_BIT;
+}
+
 void Device::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                           VkMemoryPropertyFlags properties, VkBuffer& buffer,
                           VkDeviceMemory& bufferMemory) {
@@ -395,8 +410,8 @@ void Device::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
 }
 
 void Device::createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
-                         VkFormat format, VkImageTiling tiling,
-                         VkImageUsageFlags usage,
+                         VkSampleCountFlagBits numSamples, VkFormat format,
+                         VkImageTiling tiling, VkImageUsageFlags usage,
                          VkMemoryPropertyFlags properties, VkImage& image,
                          VkDeviceMemory& imageMemory) {
   VkImageCreateInfo imageInfo{.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -405,7 +420,7 @@ void Device::createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
                               .extent = {width, height, 1},
                               .mipLevels = mipLevels,
                               .arrayLayers = 1,
-                              .samples = VK_SAMPLE_COUNT_1_BIT,
+                              .samples = numSamples,
                               .tiling = tiling,
                               .usage = usage,
                               .sharingMode = VK_SHARING_MODE_EXCLUSIVE,

@@ -94,6 +94,7 @@ void Application::createPipelineLayout() {
 void Application::createGraphicsPipeline() {
   PipelineConfig config{};
   Pipeline::populateDefaultPipelineConfig(config);
+  config.multisampleInfo.rasterizationSamples = device.getMsaaSamples();
   config.renderPass = renderer.getSwapchain()->getRenderPass();
   config.pipelineLayout = pipelineLayout;
   pipeline = std::make_unique<Pipeline>(device, "../shaders/simple.vert.spv",

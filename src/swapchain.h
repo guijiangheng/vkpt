@@ -37,6 +37,7 @@ class SwapChain {
   void createSwapChain();
   void createCommandBuffers();
   void createImageViews();
+  void createColorResources();
   void createDepthResources();
   void createRenderPass();
   void createFramebuffers();
@@ -56,12 +57,16 @@ class SwapChain {
   std::vector<VkFramebuffer> framebuffers;
   VkRenderPass renderPass;
 
+  std::vector<VkImage> swapChainImages;
+  std::vector<VkImageView> swapChainImageViews;
+
+  VkImage colorImage;
+  VkDeviceMemory colorImageMemory;
+  VkImageView colorImageView;
+
   VkImage depthImage;
   VkDeviceMemory depthImageMemory;
   VkImageView depthImageView;
-
-  std::vector<VkImage> swapChainImages;
-  std::vector<VkImageView> swapChainImageViews;
 
   VkSwapchainKHR swapChain;
   std::shared_ptr<SwapChain> oldSwapChain;
